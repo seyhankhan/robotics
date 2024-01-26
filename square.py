@@ -14,6 +14,8 @@ from time import sleep    # import the time library for the sleep function
 import brickpi3 # import the BrickPi3 drivers
 import sys
 
+EPSILON = 10
+
 BP = brickpi3.BrickPi3() # Create an instance of the BrickPi3 class. BP will be the BrickPi3 object.
 
 ports = [BP.PORT_B, BP.PORT_C]
@@ -33,8 +35,8 @@ def forward(deg):
     for i in range(2):
         BP.set_motor_position(ports[i], targets[i])
     while True:
-        if (abs(BP.get_motor_encoder(ports[0]) - targets[0]) < 5
-            and abs(BP.get_motor_encoder(ports[1]) - targets[1]) < 5):
+        if (abs(BP.get_motor_encoder(ports[0]) - targets[0]) < EPSILON
+            and abs(BP.get_motor_encoder(ports[1]) - targets[1]) < EPSILON):
             break
         sleep(0.02)
 
@@ -45,8 +47,8 @@ def turn(deg):
     BP.set_motor_position(BP.PORT_B, targetB)
     BP.set_motor_position(BP.PORT_C, targetC)
     while True:
-        if (abs(BP.get_motor_encoder(BP.PORT_B) - targetB) < 4
-            and abs(BP.get_motor_encoder(BP.PORT_C) - targetC) < 4):
+        if (abs(BP.get_motor_encoder(BP.PORT_B) - targetB) < EPSILON
+            and abs(BP.get_motor_encoder(BP.PORT_C) - targetC) < EPSILON):
             break
         sleep(0.02)
     
@@ -59,15 +61,16 @@ try:
     BP.set_motor_limits(BP.PORT_C, 25, 200)          # optionally set a power limit (in percent) and a speed limit (in Degrees Per Second)
     
     # forward(int(sys.argv[1]))
-    for i in range(1):
-        forward(int(sys.argv[1])) #800
-        turn(int(sys.argv[2]))
+
+    for i in range(4):
+        forward(410)
+        turn(230)
 
 
     # sleep(3)
 
     
-    print('Doasdfasdfne')
+    print('done')
 
     
     '''while True:
