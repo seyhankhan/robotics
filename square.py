@@ -16,6 +16,9 @@ import sys
 
 BP = brickpi3.BrickPi3() # Create an instance of the BrickPi3 class. BP will be the BrickPi3 object.
 
+ports = [BP.PORT_B, BP.PORT_C]
+
+
 def reset_encoders():
     #reset_encoders motors
     try:
@@ -26,13 +29,12 @@ def reset_encoders():
 
 def forward(deg):
     reset_encoders()
-    targetB = BP.get_motor_encoder(BP.PORT_B) + deg
-    targetC = BP.get_motor_encoder(BP.PORT_C) + deg
-    BP.set_motor_position(BP.PORT_B, targetB)
-    BP.set_motor_position(BP.PORT_C, targetC)
+    targets = [(BP.get_motor_encoder(port) + deg) for port in ports]
+    for i in range(2):
+        BP.set_motor_position(ports[i], targets[i])
     while True:
-        if (abs(BP.get_motor_encoder(BP.PORT_B) - targetB) < 5
-            and abs(BP.get_motor_encoder(BP.PORT_C) - targetC) < 5):
+        if (abs(BP.get_motor_encoder(ports[0]) - targets[0]) < 5
+            and abs(BP.get_motor_encoder(ports[1]) - targets[1]) < 5):
             break
         sleep(0.02)
 
@@ -43,8 +45,8 @@ def turn(deg):
     BP.set_motor_position(BP.PORT_B, targetB)
     BP.set_motor_position(BP.PORT_C, targetC)
     while True:
-        if (abs(BP.get_motor_encoder(BP.PORT_B) - targetB) < 5
-            and abs(BP.get_motor_encoder(BP.PORT_C) - targetC) < 5):
+        if (abs(BP.get_motor_encoder(BP.PORT_B) - targetB) < 4
+            and abs(BP.get_motor_encoder(BP.PORT_C) - targetC) < 4):
             break
         sleep(0.02)
     
@@ -58,8 +60,8 @@ try:
     
     # forward(int(sys.argv[1]))
     for i in range(1):
-        forward(400)
-        turn(285)
+        forward(int(sys.argv[1])) #800
+        turn(int(sys.argv[2]))
 
 
     # sleep(3)
