@@ -26,24 +26,43 @@ def reset_encoders():
 
 def forward(deg):
     reset_encoders()
-    BP.set_motor_position(BP.PORT_B, BP.get_motor_encoder(BP.PORT_B) + deg)
-    BP.set_motor_position(BP.PORT_C, BP.get_motor_encoder(BP.PORT_B) + deg)
-    
+    targetB = BP.get_motor_encoder(BP.PORT_B) + deg
+    targetC = BP.get_motor_encoder(BP.PORT_C) + deg
+    BP.set_motor_position(BP.PORT_B, targetB)
+    BP.set_motor_position(BP.PORT_C, targetC)
+    while True:
+        if (abs(BP.get_motor_encoder(BP.PORT_B) - targetB) < 5
+            and abs(BP.get_motor_encoder(BP.PORT_C) - targetC) < 5):
+            break
+        sleep(0.02)
+
 def turn(deg):
     reset_encoders()
-    BP.set_motor_position(BP.PORT_B, (BP.get_motor_encoder(BP.PORT_B)) + deg)
-    BP.set_motor_position(BP.PORT_C, (BP.get_motor_encoder(BP.PORT_C)) - deg)
+    targetB = BP.get_motor_encoder(BP.PORT_B) + deg
+    targetC = BP.get_motor_encoder(BP.PORT_C) - deg
+    BP.set_motor_position(BP.PORT_B, targetB)
+    BP.set_motor_position(BP.PORT_C, targetC)
+    while True:
+        if (abs(BP.get_motor_encoder(BP.PORT_B) - targetB) < 5
+            and abs(BP.get_motor_encoder(BP.PORT_C) - targetC) < 5):
+            break
+        sleep(0.02)
     
 
 try:
     # reset_encoders()
 
     #BP.set_motor_power(BP.PORT_C, BP.MOTOR_FLOAT)    # float motor D
-    BP.set_motor_limits(BP.PORT_B, 50, 400)          # optionally set a power limit (in percent) and a speed limit (in Degrees Per Second)
-    BP.set_motor_limits(BP.PORT_C, 50, 400)          # optionally set a power limit (in percent) and a speed limit (in Degrees Per Second)
+    BP.set_motor_limits(BP.PORT_B, 25, 200)          # optionally set a power limit (in percent) and a speed limit (in Degrees Per Second)
+    BP.set_motor_limits(BP.PORT_C, 25, 200)          # optionally set a power limit (in percent) and a speed limit (in Degrees Per Second)
     
-    forward(int(sys.argv[1]))
-    sleep(3)
+    # forward(int(sys.argv[1]))
+    for i in range(1):
+        forward(400)
+        turn(285)
+
+
+    # sleep(3)
 
     
     print('Doasdfasdfne')
