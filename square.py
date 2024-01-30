@@ -60,11 +60,14 @@ try:
     BP.set_motor_limits(BP.PORT_B, 25, 200)          # optionally set a power limit (in percent) and a speed limit (in Degrees Per Second)
     BP.set_motor_limits(BP.PORT_C, 25, 200)          # optionally set a power limit (in percent) and a speed limit (in Degrees Per Second)
     
-    # forward(int(sys.argv[1]))
-
-    for i in range(4):
-        forward(410)
-        turn(230)
+    
+    if len(sys.argv) > 1:
+        forward(int(sys.argv[1]))
+    else:
+        for i in range(4):
+            forward(412 * 2)
+            if i < 3:
+                turn(-232)
 
 
     # sleep(3)
