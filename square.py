@@ -65,9 +65,9 @@ try:
         forward(int(sys.argv[1]))
     else:
         for i in range(4):
-            forward(412 * 2)
+            forward(824)
             if i < 3:
-                turn(-232)
+                turn(-237)
 
 
     # sleep(3)

@@ -8,8 +8,41 @@ EPSILON = 10
 
 BP = brickpi3.BrickPi3() # Create an instance of the BrickPi3 class. BP will be the BrickPi3 object.
 
+PX_PER_CM = 10
+
 ports = [BP.PORT_B, BP.PORT_C]
-        
+
+
+def reset_encoders():
+    #reset_encoders motors
+    try:
+        BP.offset_motor_encoder(BP.PORT_B, BP.get_motor_encoder(BP.PORT_B)) # reset encoder A
+        BP.offset_motor_encoder(BP.PORT_C, BP.get_motor_encoder(BP.PORT_C)) # reset encoder D
+    except IOError as error:
+        print(error)
+def forward(deg):
+    reset_encoders()
+    targets = [(BP.get_motor_encoder(port) + deg) for port in ports]
+    for i in range(2):
+        BP.set_motor_position(ports[i], targets[i])
+    while True:
+        if (abs(BP.get_motor_encoder(ports[0]) - targets[0]) < EPSILON
+            and abs(BP.get_motor_encoder(ports[1]) - targets[1]) < EPSILON):
+            break
+        sleep(0.02)
+
+def turn(deg):
+    reset_encoders()
+    targetB = BP.get_motor_encoder(BP.PORT_B) + deg
+    targetC = BP.get_motor_encoder(BP.PORT_C) - deg
+    BP.set_motor_position(BP.PORT_B, targetB)
+    BP.set_motor_position(BP.PORT_C, targetC)
+    while True:
+        if (abs(BP.get_motor_encoder(BP.PORT_B) - targetB) < EPSILON
+            and abs(BP.get_motor_encoder(BP.PORT_C) - targetC) < EPSILON):
+            break
+        sleep(0.02)
+
 class Particle:
     def __init__(self, pos):
         self.x = pos[0]
@@ -38,21 +71,22 @@ def drawParticles(particles):
     print("drawParticles:" + str(ps))
 
 try:
-    
+    BP.set_motor_limits(BP.PORT_B, 25, 200)          # optionally set a power limit (in percent) and a speed limit (in Degrees Per Second)
+    BP.set_motor_limits(BP.PORT_C, 25, 200)          # optionally set a power limit (in percent) and a speed limit (in Degrees Per Second)
+
     pos = (400, 500, 0)
-    NUM_PARTICLES = 100
+    NUM_PARTICLES = 100 # 10cm is 100
     particles = [Particle(pos) for _ in range(NUM_PARTICLES)]
     drawParticles(particles)
-  
     
     for _ in range(4):
         for _ in range(4):
+            forward(200)
+
             (x, y, theta) = pos
-            
             # move frwd
-            sleep(2)
             for p in particles:
-                p.changeDistance(100)
+                p.changeDistance(10 * PX_PER_CM)
                 
             xs = 0
             ys = 0            
@@ -62,19 +96,22 @@ try:
                 
             xs /= NUM_PARTICLES
             ys /= NUM_PARTICLES
-            
-            
+
             # print
             print(f"drawLine:{(x, y, xs, ys)}")
             drawParticles(particles)
 
             pos = (xs, ys, theta)
+            sleep(2)
+            # wait for enter
             
-            
+        turn(-237)
         [p.changeAngle(-math.pi / 2) for p in particles]
         (x, y, _) = pos
         theta = sum(map(lambda p: p.theta, particles)) / NUM_PARTICLES
         pos = (x, y, theta)
+        sleep(1)
+        
             
     # print(f"drawLine:{(500, 400, 600, 400)}")
     # for particle in particles:
