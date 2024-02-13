@@ -1,9 +1,10 @@
 import math
 import brickpi3
+from time import sleep    # import the time library for the sleep function
 
 BP = brickpi3.BrickPi3() # Create an instance of the BrickPi3 class. BP will be the BrickPi3 object.
 ports = [BP.PORT_B, BP.PORT_C]
-
+EPSILON = 10
 def reset_encoders():
 	try:
 		BP.offset_motor_encoder(BP.PORT_B, BP.get_motor_encoder(BP.PORT_B)) # reset encoder A
@@ -23,8 +24,8 @@ def forward(distanceCM):
 			break
 		sleep(0.02)
 
-def turn(deg):
-	power = (240 / 90) * deg
+def turn(rad):
+	power = (480 / math.pi) * rad
 	reset_encoders()
 	targetB = BP.get_motor_encoder(BP.PORT_B) + power
 	targetC = BP.get_motor_encoder(BP.PORT_C) - power
@@ -38,21 +39,27 @@ def turn(deg):
 
 def navigateToWaypoint(targetX, targetY, position):
 	vector = (targetX - position[0], targetY - position[1])
-	distance = math.sqrt(vector[0] ** 2, vector[1] ** 2)
+	distance = math.sqrt(vector[0] ** 2 + vector[1] ** 2)
 
-	alpha = math.atan2(vector[1], vector[0]) 
+	alpha = math.atan2(vector[1], vector[0])
 	beta = alpha - position[2]
-	beta = (beta + math.pi) % (2 * math.pi) - math.pi
+	if beta < -math.pi:
+		beta += 2 * math.pi
+	if beta > math.pi:
+		beta -= 2 * math.pi
 	turn(beta)
 	forward(distance)
-
+	return (targetX, targetY, alpha)
 
 try:
-	BP.set_motor_limits(BP.PORT_B, 25, 200)		  # optionally set a power limit (in percent) and a speed limit (in Degrees Per Second)
-	BP.set_motor_limits(BP.PORT_C, 25, 200)		  # optionally set a power limit (in percent) and a speed limit (in Degrees Per Second)
-	navigateToWaypoint(50, 70, (0,0,0))
+	BP.set_motor_limits(BP.PORT_B, 20, 180)		  # optionally set a power limit (in percent) and a speed limit (in Degrees Per Second)
+	BP.set_motor_limits(BP.PORT_C, 20, 180)		  # optionally set a power limit (in percent) and a speed limit (in Degrees Per Second)
+	position = (0,0,0)
+	while True:
+		targetX = int(input("Target x: "))
+		targetY = int(input("Target y: "))
+		position = navigateToWaypoint(targetX, targetY, position)
 
-		
 except KeyboardInterrupt: # except the program gets interrupted by Ctrl+C on the keyboard.
 	BP.reset_all()  # Unconfigure the sensors, disable the motors, and restore the LED to the control of the BrickPi3 firmware.
 		
