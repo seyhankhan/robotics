@@ -1,10 +1,19 @@
-import time
+import brickpi3
+from time import sleep
 import random
 import math
+import numpy as np
+from robot import *
+from waypoint import *
 
 SIGMA_S = 3.0
 K = 0.2
 
+RELIABILITY_CEILING = 140
+
+SIGMA_E = 2.0
+SIGMA_F = math.pi / 180.0
+SIGMA_G = math.pi / 180.0
 
 # Functions to generate some dummy particles data:
 def calcX():
@@ -41,7 +50,7 @@ class Canvas:
         print("drawLine:" + str((x1, y1, x2, y2)))
 
     def drawParticles(self, data):
-        display = [(self.__screenX(d[0]), self.__screenY(d[1])) + d[2:] for d in data]
+        display = [(self.__screenX(d.x), self.__screenY(d.y)) + (d.theta,d.weight) for d in data]
         print("drawParticles:" + str(display))
 
     def __screenX(self, x):
@@ -86,25 +95,68 @@ class Map:
 
 # Simple Particles set
 class Particles:
-    def __init__(self):
-        self.n = 10
-        self.data = []
+    def __init__(self, n):
+        self.n = n
+        # make this continous
+        self.data = [Particle((0, 0, 0, 1 / n)) for _ in range(n)]
 
-    def update(self):
-        self.data = [(calcX(), calcY(), calcTheta(), calcW()) for i in range(self.n)]
+    def navigateToWaypoint(self, waypoint):
+        for particle in self.data:
+            particle.navigateToWaypoint(waypoint)
+
+    def update(self, z, mymap):
+        weightSum = 0
+        for i in range(self.n):
+            (x, y, theta, w) = self.data[i]
+            pzk = calculate_likelihood(x, y, theta, z, mymap)
+            self.data[i].weight *= pzk
+            weightSum += w * pzk
+
+        # normalization
+        for i in range(self.n):
+            self.data[i].weight /= weightSum
+
+        # resampling
+        cumWeights = list(np.cumsum(p.weight for p in self.data))
+        newData = []
+        for i in range(self.n):
+            rand = random.random()
+            for j in range(self.n):
+                if rand < cumWeights[j]:
+                    oldParticle = self.data[j]
+                    oldParticle.weight = 1 / self.n
+                    newData.append(oldParticle)
+                    break
+
+        self.data = newData
 
     def draw(self):
         canvas.drawParticles(self.data)
 
-    # def calculate_likelihoods(self):
-    #     for x, y, theta, w in self.data:
-    #         z =
-    #         calculate_likelihood(x, y, theta, z)
+class Particle:
+    def __init__(self, position):
+        self.x, self.y, self.theta, self.weight = position
+
+    def navigateToWaypoint(self, waypoint):
+        position = self.x, self.y, self.theta, self.weight
+        self.turn(getBeta(waypoint, position))
+        self.forward(getDistance(waypoint, position))
+
+    def forward(self, D):
+        e = random.gauss(0, SIGMA_E)
+        f = random.gauss(0, SIGMA_F)
+        self.x = self.x + (D + e) * math.cos(self.theta)
+        self.y = self.y + (D + e) * math.sin(self.theta)
+        self.theta = self.theta + f
+
+    def turn(self, alpha):
+        g = random.gauss(0, SIGMA_G)
+        self.theta = self.theta + alpha + g
 
 
 def calculate_likelihood(x, y, theta, z, mymap):
-    # if theta > 34 * math.pi / 180:
-    #     return skip the whole update
+    # if beta > 34 * math.pi / 180:
+    #     skip the whole update
     wall, m = mymap.closest_wall(x, y, theta * math.pi / 180)
     return random.gauss(z - m, SIGMA_S) + K
 
@@ -131,12 +183,44 @@ mymap.add_wall((210, 84, 210, 0))  # g
 mymap.add_wall((210, 0, 0, 0))  # h
 mymap.draw()
 
+waypoints = [
+    (84, 30),
+    (180, 30),
+    (180, 54),
+    (138, 54),
+    (138, 168),
+    (114, 168),
+    (114, 84),
+    (84, 84),
+    (84, 30),
+]
 
-particles = Particles()
+particles = Particles(10)
+robotPosition = waypoints[0] + (0,)
+print(4)
 
-t = 0
-while True:
-    particles.update()
+try:
+    BP.set_sensor_type(SENSOR_PORT, BP.SENSOR_TYPE.NXT_ULTRASONIC)
     particles.draw()
-    t += 0.5
-    time.sleep(0.5)
+
+    for waypoint in waypoints[1:]:
+        robotPosition = navigateToWaypoint(waypoint, robotPosition)
+        particles.navigateToWaypoint(waypoint)
+        while True:
+            try:
+                z = BP.get_sensor(SENSOR_PORT)
+                print(z)
+                if z < RELIABILITY_CEILING:
+                    break
+            except brickpi3.SensorError as error:
+                print(error)
+            sleep(0.2)
+
+        particles.update(z, mymap)
+        particles.draw()
+        # t += 0.5
+        sleep(1)
+
+except KeyboardInterrupt:
+    BP.reset_all()
+BP.reset_all()

@@ -2,16 +2,18 @@ import math
 from robot import *
 
 
-def navigateToWaypoint(waypoint, position):
-    vector = (waypoint[0] - position[0], waypoint[1] - position[1])
-
-    alpha = math.atan2(vector[1], vector[0])
+def getBeta(waypoint, position):
+    alpha = math.atan2(waypoint[1] - position[1], waypoint[0] - position[0])
     beta = alpha - position[2]
-    Robot.turn(math.remainder(beta, math.tau))
+    return math.remainder(beta, math.tau)
 
-    distance = math.hypot(vector[0], vector[1])
-    Robot.forward(distance)
+def getDistance(waypoint, position):
+    return math.hypot(waypoint[0] - position[0], waypoint[1] - position[1])
 
+def navigateToWaypoint(waypoint, position):
+    alpha = math.atan2(waypoint[1] - position[1], waypoint[0] - position[0])
+    Robot.turn(getBeta(waypoint, position))
+    Robot.forward(getDistance(waypoint, position))
     return waypoint + (alpha,)
 
 

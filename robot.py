@@ -10,7 +10,7 @@ SENSOR_PORT = BP.PORT_3
 
 EPSILON = 10
 WHEEL_ROTATION_PER_METER = 2050
-WHEEL_ROTATION_PER_RADIAN = 470 / math.pi
+WHEEL_ROTATION_PER_RADIAN = 470.0 / math.pi
 
 # Unconfigure sensors, disable motors, restore LED to BP3 firmware's control
 BP.reset_all()
