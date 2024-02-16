@@ -9,7 +9,7 @@ try:
             Robot.turn(math.pi / 2)
     else:
         if len(sys.argv) > 2:
-            Robot.turn(int(sys.argv[2]) * math.pi / 180)
+            Robot.turn(math.radians(int(sys.argv[2])))
         Robot.forward(int(sys.argv[1]))
 
 except KeyboardInterrupt:

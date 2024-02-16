@@ -1,20 +1,4 @@
-import math
 from robot import *
-
-
-def getBeta(waypoint, position):
-    alpha = math.atan2(waypoint[1] - position[1], waypoint[0] - position[0])
-    beta = alpha - position[2]
-    return math.remainder(beta, math.tau)
-
-def getDistance(waypoint, position):
-    return math.hypot(waypoint[0] - position[0], waypoint[1] - position[1])
-
-def navigateToWaypoint(waypoint, position):
-    alpha = math.atan2(waypoint[1] - position[1], waypoint[0] - position[0])
-    Robot.turn(getBeta(waypoint, position))
-    Robot.forward(getDistance(waypoint, position))
-    return waypoint + (alpha,)
 
 
 def inputWaypoint():
@@ -28,12 +12,10 @@ def inputWaypoint():
 
 if __name__ == "__main__":
     try:
-        position = (0, 0, 0)
+        Robot.setPosition((0, 0, 0))
         while True:
-            position = navigateToWaypoint(inputWaypoint(), position)
-            print(
-                f"\t(x: {position[0]:.1f}, y: {position[1]:.1f}, theta: {position[2] * 180 / math.pi:.1f}°/{position[2]:.2f}rad)"
-            )
+            Robot.navigateToWaypoint(inputWaypoint())
+            print(Robot())
     except KeyboardInterrupt:
         pass
     BP.reset_all()

@@ -14,8 +14,8 @@ X_AXIS = 400
 Y_AXIS = 500
 
 SIGMA_E = 2.0
-SIGMA_F = math.pi / 180.0
-SIGMA_G = math.pi / 180.0
+SIGMA_F = math.radians(1)
+SIGMA_G = math.radians(1)
 
 
 class ParticleDistribution:
@@ -48,11 +48,11 @@ class Particle:
         f = random.gauss(0, SIGMA_F)
         self.x = self.x + (D + e) * math.cos(self.theta)
         self.y = self.y + (D + e) * math.sin(self.theta)
-        self.theta = self.theta + f
+        self.theta = math.remainder(self.theta + f, math.tau)
 
     def turn(self, alpha):
         g = random.gauss(0, SIGMA_G)
-        self.theta = self.theta + alpha + g
+        self.theta = math.remainder(self.theta + alpha + g, math.tau)
 
     def screen_position(self):
         return (self.x * PX_PER_CM + X_AXIS, self.y * PX_PER_CM + Y_AXIS, self.theta)

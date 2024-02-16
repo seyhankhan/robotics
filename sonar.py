@@ -3,10 +3,10 @@ from time import sleep
 from robot import *
 
 try:
-    BP.set_sensor_type(SENSOR_PORT, BP.SENSOR_TYPE.NXT_ULTRASONIC)
+    Robot.setupSonar()
     while True:
         try:
-            print(BP.get_sensor(SENSOR_PORT))
+            print(BP.get_sensor(SONAR_PORT))
         except brickpi3.SensorError as error:
             print(error)
         sleep(0.1)
