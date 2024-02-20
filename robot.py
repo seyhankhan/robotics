@@ -13,7 +13,7 @@ SONAR_MAX_ANGLE = math.radians(34)
 
 EPSILON = 10
 WHEEL_ROTATION_PER_METER = 2050
-WHEEL_ROTATION_PER_RADIAN = 480.0 / math.pi
+WHEEL_ROTATION_PER_RADIAN = 490.0 / math.pi
 WHEELS = [LEFT_WHEEL, RIGHT_WHEEL]
 
 # Unconfigure sensors, disable motors, restore LED to BP3 firmware's control

@@ -11,7 +11,7 @@ NUM_PARTICLES = 10
 SIGMA_E = 2.0
 SIGMA_F = math.radians(1)
 SIGMA_G = math.radians(1)
-SIGMA_S = 3.0
+SIGMA_S = 1.0
 K = 0.2
 
 WALLS = [
@@ -75,37 +75,38 @@ class Map:
 class Particles:
     def __init__(self, n):
         self.n = n
-        # TODO: make this continuous
-        self.data = [Particle((0, 0, 0, 1.0 / n)) for _ in range(n)]
+        self.data = [Particle(WAYPOINTS[0] + (0, 1.0 / n)) for _ in range(n)]
 
     def navigateToWaypoint(self, waypoint):
-
         for particle in self.data:
             particle.navigateToWaypoint(waypoint)
 
     def update(self, z, walls):
         # adjust weights with likelihood
         weightSum = 0
-        for particle in self.data:
-            pzk = particle.likelihood(z, walls)
-            print("pzk", pzk)
-            particle.weight *= pzk
-            weightSum += particle.weight
+        print("WEIGHTS 1", [p.weight for p in self.data])
+        for p in range(self.n):
+            pzk = self.data[p].likelihood(z, walls)
+            self.data[p].weight *= pzk
+            weightSum += self.data[p].weight
 
+        if weightSum == 0:
+            for p in range(self.n):
+                self.data[p].weight = 1/self.n
+                return 
         # normalization
-        for p in self.data:
-            p.weight /= weightSum
+        for p in range(self.n):
+            self.data[p].weight /= weightSum
 
         # resampling
-        cumWeights = np.cumsum([p.weight for p in self.data])
-        newData = np.empty_like(self.data)
+        cumWeights = np.cumsum([p.weight for p in self.data]) / sum([p.weight for p in self.data])
+        newData = []
 
         for i, randNum in enumerate(np.random.rand(self.n)):
-            newData[i] = self.data[np.searchsorted(cumWeights, randNum)]
-            newData[i].weight = 1 / self.n
+            party = self.data[np.searchsorted(cumWeights, randNum)]
+            newData.append(Particle((party.x, party.y, party.theta, 1 / self.n)))
 
         self.data = newData
-        print([(d.x, d.weight) for d in self.data])
 
     def draw(self):
         canvas.drawParticles(self.data)
@@ -144,13 +145,13 @@ class Particle:
     def likelihood(self, z, walls):
         # TODO: if beta > SONAR_MAX_ANGLE, skip resample?
         wall, m = self.closest_wall(walls)
-        print("z,m",z, m)
+        if m == float("inf"):
+            return 0
 
         return random.gauss(z - m, SIGMA_S) + K
 
     def closest_wall(self, walls):
         closestWall, smallestDistance = None, float("inf")
-        print('theta x, y', math.degrees(self.theta), self.x, self.y)
 
         for wall in walls:
             (ax, ay, bx, by) = wall
@@ -162,8 +163,8 @@ class Particle:
                 continue
             mx, my = (self.x + m * math.cos(self.theta)), (self.y + m * math.sin(self.theta))
 
-            print("wall coords", wall)
-            print("m , mx,my", m, mx,my)
+            # print("wall coords", wall)
+            # print("m , mx,my", m, mx,my)
             if ((min(ax, bx) - EPSILON) < mx < (max(ax, bx) + EPSILON)) and ((min(ay, by) - EPSILON) < my < (max(ay, by) + EPSILON)) and (m < smallestDistance):
                 
                 closestWall, smallestDistance = wall, m
@@ -184,24 +185,38 @@ if __name__ == "__main__":
         Robot.setPosition(WAYPOINTS[0] + (0,))
 
         for waypoint in WAYPOINTS[1:]:
+            print("## its time for", waypoint)
             robotVector = (waypoint[0] - Robot.x, waypoint[1] - Robot.y)
 
             robotAlpha = math.atan2(robotVector[1], robotVector[0])
             robotBeta = math.remainder(robotAlpha - Robot.theta, math.tau)
             Robot.turn(robotBeta)
+            print("start",Robot())
+            print("beta", math.degrees(robotBeta))
             for particle in particles.data:
                 particle.turn(robotBeta)
 
+            z = Robot.readSonar()
+            particles.update(z, mymap.walls)
+
             remainingDistance = math.hypot(robotVector[0], robotVector[1])
             while remainingDistance > 0:
+                oldPos = (Robot.x, Robot.y)
+      
                 Robot.forward(min(20, remainingDistance))
-                for particle in particles.data:
-                    particle.forward(min(20, remainingDistance))
+             
+                for p in range(particles.n):
+                    print(particles.data[p].position())
+                    particles.data[p].forward(min(20, remainingDistance))
+                    print(particles.data[p].position())
+
                 remainingDistance -= 20
 
                 z = Robot.readSonar()
                 particles.update(z, mymap.walls)
                 Robot.setPosition(particles.mean_position())
+                print("final",Robot())
+                canvas.drawLine(oldPos + (Robot.x, Robot.y))
                 particles.draw()
                 sleep(1)
 

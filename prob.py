@@ -23,7 +23,7 @@ class ParticleDistribution:
         self.particles = [Particle() for _ in range(numParticles)]
 
     def forward(self, distanceCM):
-        [p.move(distanceCM) for p in particles]
+        [p.move(distanceCM) for p in self.particles]
 
     def turn(self, alpha):
         [p.turn(alpha) for p in particles]
@@ -66,7 +66,7 @@ if __name__ == "__main__":
         particles.draw()
 
         for _ in range(4):
-            for _ in range(SQUARE_LENGTH / STEP_LENGTH):
+            for _ in range(int(SQUARE_LENGTH / STEP_LENGTH)):
                 Robot.forward(STEP_LENGTH)
 
                 particles.forward(STEP_LENGTH)
