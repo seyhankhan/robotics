@@ -8,12 +8,12 @@ LEFT_WHEEL = BP.PORT_B
 RIGHT_WHEEL = BP.PORT_C
 SONAR_PORT = BP.PORT_3
 
-SONAR_RELIABILITY_CEILING = 140
+SONAR_RELIABILITY_CEILING = 200
 SONAR_MAX_ANGLE = math.radians(34)
 
 EPSILON = 10
 WHEEL_ROTATION_PER_METER = 2050
-WHEEL_ROTATION_PER_RADIAN = 470.0 / math.pi
+WHEEL_ROTATION_PER_RADIAN = 480.0 / math.pi
 WHEELS = [LEFT_WHEEL, RIGHT_WHEEL]
 
 # Unconfigure sensors, disable motors, restore LED to BP3 firmware's control
@@ -32,7 +32,7 @@ class Robot:
     def __str__(self):
         return f"\t(x: {Robot.x:.1f}, y: {Robot.y:.1f}, theta: {math.degrees(Robot.theta):.1f}°/{Robot.theta:.2f}rad)"
 
-    def setPosition(self, position):
+    def setPosition(position):
         Robot.x, Robot.y, Robot.theta = position
 
     def setupSonar():
@@ -48,6 +48,7 @@ class Robot:
             except brickpi3.SensorError as error:
                 print(error)
             sleep(0.2)
+        return z
 
     def forward(distanceCM):
         Robot.reset_encoders()
