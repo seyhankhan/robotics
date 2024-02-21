@@ -6,9 +6,9 @@ from time import sleep
 from robot import *
 from waypoint import *
 
-NUM_PARTICLES = 10
+NUM_PARTICLES = 100
 
-SIGMA_E = 2.0
+SIGMA_E = 0.5
 SIGMA_F = math.radians(1)
 SIGMA_G = math.radians(1)
 SIGMA_S = 1.0
@@ -53,8 +53,10 @@ class Canvas:
         y2 = self._screenY(line[3])
         print(f"drawLine:{(x1, y1, x2, y2)}")
 
+    # def waypoints(sl)
+
     def drawParticles(self, data):
-        print(f"drawParticles:{[(self._screenX(d.x), self._screenY(d.y), d.theta, d.weight) for d in data]}")
+        print(f"drawParticles:{[(self._screenX(d.x), self._screenY(d.y), d.theta) for d in data]}")
 
     def _screenX(self, x):
         return (x + self.margin) * self.scale
@@ -80,11 +82,15 @@ class Particles:
     def navigateToWaypoint(self, waypoint):
         for particle in self.data:
             particle.navigateToWaypoint(waypoint)
+    
+    def printParticles(self):
+        print("Particles:")
+        for p in self.data:
+            print("\t", round(p.x), round(p.y), round(p.theta))
 
     def update(self, z, walls):
         # adjust weights with likelihood
         weightSum = 0
-        print("WEIGHTS 1", [p.weight for p in self.data])
         for p in range(self.n):
             pzk = self.data[p].likelihood(z, walls)
             self.data[p].weight *= pzk
@@ -92,7 +98,7 @@ class Particles:
 
         if weightSum == 0:
             for p in range(self.n):
-                self.data[p].weight = 1/self.n
+                self.data[p].weight = 1.0/self.n
                 return 
         # normalization
         for p in range(self.n):
@@ -107,6 +113,7 @@ class Particles:
             newData.append(Particle((party.x, party.y, party.theta, 1 / self.n)))
 
         self.data = newData
+        self.printParticles()
 
     def draw(self):
         canvas.drawParticles(self.data)
@@ -136,7 +143,7 @@ class Particle:
         e = random.gauss(0, SIGMA_E)
         self.x += (D + e) * math.cos(self.theta)
         self.y += (D + e) * math.sin(self.theta)
-        self.theta = math.remainder(self.theta + random.gauss(0, SIGMA_F), math.tau)
+        self.theta = math.remainder(random.gauss(self.theta, SIGMA_F), math.tau)
 
     def turn(self, radians):
         g = random.gauss(0, SIGMA_G)
@@ -147,8 +154,9 @@ class Particle:
         wall, m = self.closest_wall(walls)
         if m == float("inf"):
             return 0
-
-        return random.gauss(z - m, SIGMA_S) + K
+        pzk = z - m + random.gauss(0, SIGMA_S) + K
+        print("LIKELIHOOD", pzk)
+        return pzk
 
     def closest_wall(self, walls):
         closestWall, smallestDistance = None, float("inf")
@@ -190,14 +198,18 @@ if __name__ == "__main__":
 
             robotAlpha = math.atan2(robotVector[1], robotVector[0])
             robotBeta = math.remainder(robotAlpha - Robot.theta, math.tau)
-            Robot.turn(robotBeta)
-            print("start",Robot())
+            print("TURNT")
             print("beta", math.degrees(robotBeta))
+            print(Robot())
+            print("vector", robotVector)
+            Robot.turn(robotBeta)
             for particle in particles.data:
                 particle.turn(robotBeta)
 
             z = Robot.readSonar()
             particles.update(z, mymap.walls)
+            Robot.setPosition(particles.mean_position())
+
 
             remainingDistance = math.hypot(robotVector[0], robotVector[1])
             while remainingDistance > 0:
@@ -206,16 +218,13 @@ if __name__ == "__main__":
                 Robot.forward(min(20, remainingDistance))
              
                 for p in range(particles.n):
-                    print(particles.data[p].position())
                     particles.data[p].forward(min(20, remainingDistance))
-                    print(particles.data[p].position())
 
                 remainingDistance -= 20
 
                 z = Robot.readSonar()
                 particles.update(z, mymap.walls)
                 Robot.setPosition(particles.mean_position())
-                print("final",Robot())
                 canvas.drawLine(oldPos + (Robot.x, Robot.y))
                 particles.draw()
                 sleep(1)

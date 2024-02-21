@@ -42,6 +42,7 @@ class Robot:
         while True:
             try:
                 z = BP.get_sensor(SONAR_PORT)
+                print("sonar", z)
                 if z < SONAR_RELIABILITY_CEILING:
                     break
                 print(f"UNRELIABLE SONAR: {z}cm")
