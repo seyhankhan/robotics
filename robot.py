@@ -11,8 +11,8 @@ SONAR_PORT = BP.PORT_3
 SONAR_RELIABILITY_CEILING = 200
 SONAR_MAX_ANGLE = math.radians(34)
 
-EPSILON = 10
-WHEEL_ROTATION_PER_METER = 2050
+EPSILON = 5
+WHEEL_ROTATION_PER_METER = 2150
 WHEEL_ROTATION_PER_RADIAN = 490.0 / math.pi
 WHEELS = [LEFT_WHEEL, RIGHT_WHEEL]
 
@@ -65,6 +65,9 @@ class Robot:
     def turn(radians):
         Robot.reset_encoders()
         wheelRotation = WHEEL_ROTATION_PER_RADIAN * radians
+        if wheelRotation < 0:
+            wheelRotation *= 1.1 # increase turn when going right 
+
         if wheelRotation == 0:
             return
         Robot._set_targets(
@@ -84,7 +87,7 @@ class Robot:
 
     def _set_targets(targets):
         for i in range(2):
-            BP.set_motor_position(WHEELS[i], targets[i])
+            BP.set_motor_position(WHEELS[1-i], targets[1-i])
         while True:
             if all(
                 abs(BP.get_motor_encoder(WHEELS[i]) - targets[i]) < EPSILON
