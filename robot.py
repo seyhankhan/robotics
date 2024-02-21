@@ -65,8 +65,6 @@ class Robot:
     def turn(radians):
         Robot.reset_encoders()
         wheelRotation = WHEEL_ROTATION_PER_RADIAN * radians
-        if wheelRotation < 0:
-            wheelRotation *= 1.1 # increase turn when going right 
 
         if wheelRotation == 0:
             return
@@ -87,7 +85,7 @@ class Robot:
 
     def _set_targets(targets):
         for i in range(2):
-            BP.set_motor_position(WHEELS[1-i], targets[1-i])
+            BP.set_motor_position(WHEELS[1 - i], targets[1 - i])
         while True:
             if all(
                 abs(BP.get_motor_encoder(WHEELS[i]) - targets[i]) < EPSILON
