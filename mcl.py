@@ -8,7 +8,6 @@ from waypoint import *
 
 NUM_PARTICLES = 120
 
-
 SIGMA_E = 1.0
 SIGMA_F = math.radians(1.0)
 SIGMA_G = math.radians(3.0)
@@ -54,10 +53,13 @@ class Canvas:
         x2 = self._screenX(line[2])
         y2 = self._screenY(line[3])
         print(f"drawLine:{(x1, y1, x2, y2)}")
+    
+    def _screenWaypoints(self):
+        return [(self._screenX(x), self._screenY(y), 0) for (x,y) in WAYPOINTS]
 
     def drawParticles(self, data):
         print(
-            f"drawParticles:{[(self._screenX(d.x), self._screenY(d.y), d.theta) for d in data] + [(self._screenX(w[0]), self._screenY(w[1]), 0) for w in WAYPOINTS] }"
+            f"drawParticles:{[(self._screenX(d.x), self._screenY(d.y), d.theta) for d in data] + self._screenWaypoints()}"
         )
 
     def _screenX(self, x):
@@ -67,23 +69,10 @@ class Canvas:
         return (self.map_size + self.margin - y) * self.scale
 
 
-class Map:
-    def __init__(self, walls):
-        self.walls = walls
-
-    def draw(self):
-        for wall in self.walls:
-            canvas.drawLine(wall)
-
-
 class Particles:
-    def __init__(self, n, startingPosition=WAYPOINTS[0] + (0.0,)):
+    def __init__(self, n, position):
         self.n = n
-        self.data = [Particle(startingPosition + (1.0 / n,)) for _ in range(n)]
-
-    def navigateToWaypoint(self, waypoint):
-        for particle in self.data:
-            particle.navigateToWaypoint(waypoint)
+        self.data = [Particle(position + (1.0 / n,)) for _ in range(n)]
 
     def __str__(self):
         output = f"{self.n} Particles:\n"
@@ -114,21 +103,19 @@ class Particles:
         newData = []
 
         for i, randNum in enumerate(np.random.rand(self.n)):
-            party = self.data[np.searchsorted(cumWeights, randNum)]
-            newData.append(Particle((party.x, party.y, party.theta, 1 / self.n)))
+            particle = self.data[np.searchsorted(cumWeights, randNum)]
+            newData.append(Particle((particle.x, particle.y, particle.theta, 1.0 / self.n)))
 
         self.data = newData
         return True
 
-    def average_theta(self):
-        xs, ys = 0, 0
-
+    def mean_theta(self):
+        xs = ys = 0
         for particle in self.data:
             xs += math.cos(particle.theta)
             ys += math.sin(particle.theta)
         xs /= self.n
         ys /= self.n
-
         return math.remainder(math.atan2(ys, xs), math.tau)
 
     def draw(self):
@@ -138,7 +125,7 @@ class Particles:
         return (
             sum(p.x for p in self.data) / self.n,
             sum(p.y for p in self.data) / self.n,
-            self.average_theta(),
+            self.mean_theta(),
         )
 
 
@@ -147,16 +134,7 @@ class Particle:
         self.x, self.y, self.theta, self.weight = position
 
     def __str__(self):
-        return f"\t{self.x:.1f}\t{self.y:.1f}\t{self.theta:.1f}\t{self.weight:.5f}\n"
-
-    def position(self):
-        return (self.x, self.y, self.theta)
-
-    def navigateToWaypoint(self, waypoint):
-        vector = waypoint[0] - self.x, waypoint[1] - self.y
-        alpha = math.atan2(vector[1], vector[0])
-        self.turn(alpha - self.theta)
-        self.forward(min(20, math.hypot(vector[0], vector[1])))
+        return f"\t{self.x:.1f}\t{self.y:.1f}\t{math.degrees(self.theta):.1f}\t{self.weight:.5f}\n"
 
     def forward(self, D):
         e = random.gauss(0, SIGMA_E)
@@ -169,13 +147,10 @@ class Particle:
         self.theta = math.remainder(self.theta + radians + g, math.tau)
 
     def likelihood(self, z, walls):
-
         wall, m = self.closest_wall(walls)
-
         if m == float("inf"):
             return 0
-        pzk = math.exp(-((z - m) ** 2) / (2 * SIGMA_S**2)) + K
-        return pzk
+        return math.exp(-((z - m) ** 2) / (2 * SIGMA_S**2)) + K
 
     def closest_wall(self, walls):
         closestWall, smallestDistance = None, float("inf")
@@ -198,15 +173,15 @@ class Particle:
                 and ((min(ay, by) - EPSILON) < my < (max(ay, by) + EPSILON))
                 and (m < smallestDistance)
             ):
-                # particleVector = np.array([math.cos(self.theta), np.sin(self.theta)])
-                # normalToWall = np.array([ay - by, bx - ax])
+                particleVector = np.array([math.cos(self.theta), np.sin(self.theta)])
+                normalToWall = np.array([ay - by, bx - ax])
 
-                # wallAngle = np.dot(particleVector, normalToWall) / (
-                #     np.linalg.norm(particleVector) * np.linalg.norm(normalToWall)
-                # )
-                # if wallAngle > SONAR_MAX_ANGLE:
-                #     print(f"Sonar can't read at {math.degrees(wallAngle):.1f} degrees")
-                #     continue
+                incidenceTheta = np.arccos(np.dot(particleVector, normalToWall) / (
+                    np.linalg.norm(particleVector) * np.linalg.norm(normalToWall)
+                ))
+                if incidenceTheta > SONAR_MAX_ANGLE:
+                    print(f"Sonar can't reliably read at {math.degrees(incidenceTheta):.1f} degrees to the wall {wall}")
+                    continue
                 closestWall, smallestDistance = wall, m
 
         return closestWall, smallestDistance
@@ -215,51 +190,50 @@ class Particle:
 if __name__ == "__main__":
     try:
         canvas = Canvas()
-        mymap = Map(WALLS)
-        mymap.draw()
+        for wall in WALLS:
+            canvas.drawLine(wall)
 
-        particles = Particles(NUM_PARTICLES)
+        particles = Particles(NUM_PARTICLES, WAYPOINTS[0] + (0.0,))
         particles.draw()
 
         Robot.setupSonar()
         Robot.setPosition(WAYPOINTS[0] + (0,))
 
         for waypoint in WAYPOINTS[1:]:
-            print("##### its time for", waypoint, "#####")
-
-            while True:
+            print("Waypoint:", waypoint)
+            while True:                
+                # Success if 3cm from waypoint
                 robotVector = (waypoint[0] - Robot.x, waypoint[1] - Robot.y)
+                if math.hypot(robotVector[0], robotVector[1]) < 3:
+                    break
 
+                # TURN
                 robotAlpha = math.atan2(robotVector[1], robotVector[0])
                 robotBeta = math.remainder(robotAlpha - Robot.theta, math.tau)
-                print("beta", math.degrees(robotBeta))
                 Robot.turn(robotBeta)
                 for particle in particles.data:
                     particle.turn(robotBeta)
-
+                
+                # FORWARD
                 remainingDistance = math.hypot(robotVector[0], robotVector[1])
                 oldPos = (Robot.x, Robot.y)
                 Robot.forward(min(20, remainingDistance))
-
                 for p in range(particles.n):
                     particles.data[p].forward(min(20, remainingDistance))
 
+                # ADJUSTMENT
                 z = Robot.readSonar()
-                success = particles.update(z, mymap.walls)
+                success = particles.update(z, WALLS)
                 if success:
                     Robot.setPosition(particles.mean_position())
                 else:
                     print("Unreliable sonar update")
-                print(Robot())
+
+                # DRAW PATH
                 canvas.drawLine(oldPos + (Robot.x, Robot.y))
                 particles.draw()
                 sleep(2)
-                if math.hypot(Robot.x - waypoint[0], Robot.y - waypoint[1]) < 3:
-                    break
-                print("-- END OF STEP --")
-
-            # Robot.navigateToWaypoint(waypoint)
-            # particles.navigateToWaypoint(waypoint)
+                
 
     except KeyboardInterrupt:
         BP.reset_all()
