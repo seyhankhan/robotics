@@ -9,7 +9,7 @@ RIGHT_WHEEL = BP.PORT_C
 SONAR_PORT = BP.PORT_3
 
 SONAR_RELIABILITY_CEILING = 200
-SONAR_MAX_ANGLE = math.radians(34)
+SONAR_MAX_ANGLE = math.radians(40)
 
 EPSILON = 5
 WHEEL_ROTATION_PER_METER = 2150
@@ -65,6 +65,8 @@ class Robot:
     def turn(radians):
         Robot.reset_encoders()
         wheelRotation = WHEEL_ROTATION_PER_RADIAN * radians
+        if wheelRotation < 0:
+            wheelRotation *= 1.05
 
         if wheelRotation == 0:
             return

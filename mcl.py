@@ -6,13 +6,13 @@ from time import sleep
 from robot import *
 from waypoint import *
 
-NUM_PARTICLES = 20
+NUM_PARTICLES = 120
 
 
 SIGMA_E = 1.0
-SIGMA_F = math.radians(0.25)
-SIGMA_G = math.radians(3)
-SIGMA_S = 0.5
+SIGMA_F = math.radians(1.0)
+SIGMA_G = math.radians(3.0)
+SIGMA_S = 1.0
 K = 0.03
 
 WALLS = [
@@ -88,7 +88,7 @@ class Particles:
     def __str__(self):
         output = f"{self.n} Particles:\n"
         for p in self.data:
-            output += f"\t{round(p.x, 1)}\t{round(p.y, 1)}\t{round(p.theta, 1)}\t{round(p.weight, 5)}\n"
+            output += str(p)
         return output
 
     def update(self, z, walls):
@@ -118,7 +118,6 @@ class Particles:
             newData.append(Particle((party.x, party.y, party.theta, 1 / self.n)))
 
         self.data = newData
-        print(self)
         return True
 
     def average_theta(self):
@@ -147,6 +146,9 @@ class Particle:
     def __init__(self, position):
         self.x, self.y, self.theta, self.weight = position
 
+    def __str__(self):
+        return f"\t{self.x:.1f}\t{self.y:.1f}\t{self.theta:.1f}\t{self.weight:.5f}\n"
+
     def position(self):
         return (self.x, self.y, self.theta)
 
@@ -167,14 +169,12 @@ class Particle:
         self.theta = math.remainder(self.theta + radians + g, math.tau)
 
     def likelihood(self, z, walls):
-        # TODO: if beta > SONAR_MAX_ANGLE, skip resample?
+
         wall, m = self.closest_wall(walls)
 
         if m == float("inf"):
             return 0
-        # pzk = random.gauss(z - m, SIGMA_S) + K
         pzk = math.exp(-((z - m) ** 2) / (2 * SIGMA_S**2)) + K
-        print(f"wall={wall}\tm={round(m, 2)}\tpzk={round(pzk, 4)}")
         return pzk
 
     def closest_wall(self, walls):
@@ -189,6 +189,7 @@ class Particle:
             # if wall is behind: skip
             if m < 0:
                 continue
+
             mx = self.x + m * math.cos(self.theta)
             my = self.y + m * math.sin(self.theta)
 
@@ -197,6 +198,15 @@ class Particle:
                 and ((min(ay, by) - EPSILON) < my < (max(ay, by) + EPSILON))
                 and (m < smallestDistance)
             ):
+                # particleVector = np.array([math.cos(self.theta), np.sin(self.theta)])
+                # normalToWall = np.array([ay - by, bx - ax])
+
+                # wallAngle = np.dot(particleVector, normalToWall) / (
+                #     np.linalg.norm(particleVector) * np.linalg.norm(normalToWall)
+                # )
+                # if wallAngle > SONAR_MAX_ANGLE:
+                #     print(f"Sonar can't read at {math.degrees(wallAngle):.1f} degrees")
+                #     continue
                 closestWall, smallestDistance = wall, m
 
         return closestWall, smallestDistance
@@ -215,7 +225,7 @@ if __name__ == "__main__":
         Robot.setPosition(WAYPOINTS[0] + (0,))
 
         for waypoint in WAYPOINTS[1:]:
-            print("#### its time for", waypoint, "####")
+            print("##### its time for", waypoint, "#####")
 
             while True:
                 robotVector = (waypoint[0] - Robot.x, waypoint[1] - Robot.y)
@@ -239,15 +249,12 @@ if __name__ == "__main__":
                 if success:
                     Robot.setPosition(particles.mean_position())
                 else:
-                    print(
-                        "SHIT ITSELF ----------------------------------------------------------------------------------------------------------------------------------------"
-                    )
-                    pass
+                    print("Unreliable sonar update")
                 print(Robot())
                 canvas.drawLine(oldPos + (Robot.x, Robot.y))
                 particles.draw()
                 sleep(2)
-                if math.hypot(Robot.x - waypoint[0], Robot.y - waypoint[1]) < 5:
+                if math.hypot(Robot.x - waypoint[0], Robot.y - waypoint[1]) < 3:
                     break
                 print("-- END OF STEP --")
 
